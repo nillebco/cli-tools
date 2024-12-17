@@ -30,10 +30,10 @@ invoke_tunnel() {
 
 upload_image() {
     get_server_ip
-    PORTPAIR=${PORTPAIR:-8080:8080}
+    PORT=${PORT:8017}
     scp -i $ssh_key_file $APP_NAME.tar.gz devops@$server_ip:/home/devops/$APP_NAME.tar.gz
     sha256sum $APP_NAME.tar.gz
-    echo "now execute './cliops load-image $APP_NAME.tar.gz && ./cliops start $APP_NAME $VERSION $PORTPAIR' on the server"
+    echo "now execute './cliops load-image $APP_NAME.tar.gz && ./cliops start $APP_NAME $VERSION $PORT' on the server"
 }
 
 upload_cliops() {

@@ -23,7 +23,6 @@ load_image() {
         exit 1
     fi
     sha256sum $FILENAME
-    gunzip $FILENAME
     IMAGE_NAME=$(gunzip -c $FILENAME | podman load | grep "Loaded image(s):" | sed 's/Loaded image(s): //')
     IMAGE_ID=$(podman images --filter reference="${IMAGE_NAME}" --format "{{.ID}}")
     echo "loaded image: $IMAGE_NAME $IMAGE_ID"
@@ -33,7 +32,7 @@ load_image() {
 start() {
     APPNAME=$2
     VERSION=$3
-    PORTPAIR=$4
+    PORT=$4
     PODNAME=$5
     if [ -z "$PODNAME" ]; then
         if [ -n "$cliops_PODNAME" ]; then
@@ -48,7 +47,7 @@ start() {
     podman stop $APPNAME
     podman rm $APPNAME
     set -eux
-    podman run --pod $PODNAME -d --name $APPNAME --restart=always -u 100 -v ./data-$APPNAME:/app/data:Z -v ./secrets-$APPNAME:/app/secrets nillebco/$APPNAME:$VERSION
+    podman run --pod $PODNAME -d --name $APPNAME --restart=always -u 100 -e PORT=$PORT -v ./data-$APPNAME:/app/data:Z -v ./secrets-$APPNAME:/app/secrets nillebco/$APPNAME:$VERSION
 }
 
 clean_pod() {
