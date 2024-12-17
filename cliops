@@ -1,0 +1,79 @@
+load_dotenv() {
+    if [ -f .env ]; then
+        # export $(cat .env | xargs)
+        set -a; source .env; set +a
+    fi
+}
+
+load_dotenv
+env | grep cliops_
+
+install_app() {
+    APPNAME=$2
+    mkdir -p data-$APPNAME
+    mkdir -p secrets-$APPNAME
+    podman unshare chown 100:101 -R data-$APPNAME
+}
+
+load_image() {
+    FILENAME=$2
+    set -eux
+    if [ ! -f $FILENAME ]; then
+        echo "$FILENAME does not exist"
+        exit 1
+    fi
+    sha256sum $FILENAME
+    gunzip $FILENAME
+    IMAGE_NAME=$(gunzip -c $FILENAME | podman load | grep "Loaded image(s):" | sed 's/Loaded image(s): //')
+    IMAGE_ID=$(podman images --filter reference="${IMAGE_NAME}" --format "{{.ID}}")
+    echo "loaded image: $IMAGE_NAME $IMAGE_ID"
+    echo "retag? podman tag $IMAGE_ID nillebco/appname:version"
+}
+
+start() {
+    APPNAME=$2
+    VERSION=$3
+    PORTPAIR=$4
+    PODNAME=$5
+    if [ -z "$PODNAME" ]; then
+        if [ -n "$cliops_PODNAME" ]; then
+            PODNAME=$cliops_PODNAME
+        else
+            PODNAME="${APPNAME}-pod"
+        fi
+    fi
+    set -x
+    load_dotenv
+    podman logs $APPNAME > $APPNAME-$VERSION-pre.log 2>&1
+    podman stop $APPNAME
+    podman rm $APPNAME
+    set -eux
+    podman run --pod $PODNAME -d --name $APPNAME --restart=always -u 100 -v ./data-$APPNAME:/app/data:Z -v ./secrets-$APPNAME:/app/secrets nillebco/$APPNAME:$VERSION
+}
+
+clean_pod() {
+    PODNAME=$1
+    if [ -z "$PODNAME" ]; then
+        PODNAME="nillebco-pod"
+    fi
+    podman pod stop $PODNAME
+    podman pod rm $PODNAME
+}
+
+case "$1" in
+    install-app)
+        install_app $@
+        ;;
+    load-image)
+        load_image $@
+        ;;
+    start)
+        start $@
+        ;;
+    clean-pod)
+        clean_pod $@
+        ;;
+    *)
+        echo "Error: Invalid command. Available commands: load-image | start | clean-pod"
+        ;;
+esac
