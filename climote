@@ -19,7 +19,8 @@ get_server_ip() {
 
 invoke_ssh() {
     get_server_ip
-    ssh -i $ssh_key_file devops@$server_ip
+    echo "ssh -i $ssh_key_file devops@$server_ip ${@:2}"
+    ssh -i $ssh_key_file devops@$server_ip ${@:2}
 }
 
 invoke_tunnel() {
@@ -43,19 +44,21 @@ upload_cliops() {
 
 invoke_scp_to() {
     FILENAME=$2
+    REMOTE_PATH=$3
     get_server_ip
-    scp -i $ssh_key_file $FILENAME devops@$server_ip:/home/devops/apps/$FILENAME
+    scp -i $ssh_key_file $FILENAME devops@$server_ip:$REMOTE_PATH
 }
 
 invoke_scp_from() {
-    FILENAME=$2
+    REMOTE_PATH=$2
+    FILENAME=$3
     get_server_ip
-    scp -i $ssh_key_file devops@$server_ip:/home/devops/apps/$FILENAME $FILENAME
+    scp -i $ssh_key_file devops@$server_ip:$REMOTE_PATH $FILENAME
 }
 
 case "$1" in
     ssh)
-        invoke_ssh
+        invoke_ssh $@
         ;;
     tunnel)
         invoke_tunnel
